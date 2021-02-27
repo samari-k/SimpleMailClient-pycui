@@ -8,7 +8,9 @@ A simple mail client using py_cui, imapclient and pyzmail
    Next milestone will be the functionality of sending emails.
 
    For the user interface I use py_cui (https://github.com/jwlodek/py_cui).
+   
    For interaction with the server I use imapclient (https://github.com/mjs/imapclient).
+   
    For reading the mails I use pyzmail36 (https://github.com/ascoderu/pyzmail).
 
 ## Usage:
