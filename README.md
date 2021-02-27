@@ -1,6 +1,8 @@
 # SimpleMailClient-pycui
 A simple mail client using py_cui, imapclient and pyzmail
 
+![screenshot of the program](simple_mail_client.png)
+
 ## Description:
 
    This script lets you connect to an IMAP-Server, select a folder and read the Emails inside the selected folder.
