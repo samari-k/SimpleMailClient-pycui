@@ -1,36 +1,38 @@
 #! /usr/bin/env python3
 
-####################################################################################################################
-# Description:
-#
-#   This script lets you connect to an IMAP-Server, select a folder and read the Emails inside the selected folder.
-#   For a faster access the last used servername and email address are stored in a txt-file and used at next start.
-#   Next milestone will be the functionality of sending emails.
-#
-#   For the user interface I use py_cui (https://github.com/jwlodek/py_cui).
-#   For interaction with the server I use imapclient (https://github.com/mjs/imapclient).
-#   For reading the mails I use pyzmail36 (https://github.com/ascoderu/pyzmail).
-#
-# Usage:
-#
-#   Use the arrow keys to switch between widgets. Press Enter to focus the selected widget and Escape to leave the
-#   focus mode.
-#   Enter server/mail/password details, select connect and press Enter. The folders will now be presented in the
-#   folder widget.
-#   Select a folder to view the contained mails in the seected folder widget. (This may take a while, stay calm!)
-#   Select a mail to read the message in the message-widget.
-#   If you like to connect to a different account, you have to select the disconnect button first.
-#
-# Author:   samari-k
-# Version:  0.1
-###################################################################################################################
+"""
+ Description:
+
+   This script lets you connect to an IMAP-Server, select a folder and read the Emails inside the selected folder.
+   For a faster access the last used servername and email address are stored in a txt-file and used at next start.
+   Next milestone will be the functionality of sending emails.
+
+   For the user interface I use py_cui (https://github.com/jwlodek/py_cui).
+   For interaction with the server I use imapclient (https://github.com/mjs/imapclient).
+   For reading the mails I use pyzmail36 (https://github.com/ascoderu/pyzmail).
+
+ Usage:
+
+   Use the arrow keys to switch between widgets. Press Enter to focus the selected widget and Escape to leave the
+   focus mode.
+   Enter server/mail/password details, select connect and press Enter. The folders will now be presented in the
+   folder widget.
+   Select a folder to view the contained mails in the seected folder widget. (This may take a while, stay calm!)
+   Select a mail to read the message in the message-widget.
+   If you like to connect to a different account, you have to select the disconnect button first.
+
+ Author:   samari-k
+ Version:  0.1
+"""
 
 import py_cui
 import imapclient
 import pyzmail
+import textwrap
 
 # TODO:
 #   * integrate subfolders
+#   * put date in subject line
 #   * implement possibility to send/delete/move mails
 #   * expand usability by adding more key commands
 #   * visualize seen/unseen (maybe by colors?)
@@ -38,14 +40,13 @@ import pyzmail
 #   * make error handling more elegant
 #   * handle error-throwing mouseclicks
 #   * show loading-popup while loading messages
-#   * implement line-breaks in message-widget
 #   * set minimum terminal size for a good look
 
 
 class SimpleMailClient:
     def __init__(self, master):
         """create the cui with all necessary widgets"""
-        
+
         self.master = master
         self.connection = None    # this will be the connection object, once the connection to the server is set up
 
@@ -135,7 +136,8 @@ class SimpleMailClient:
         try:
             self.connection.select_folder(self.folder_scroll_menu.get())
 
-            mail_uids = self.connection.search()[::-1]  # This stores a list of all unique IDs of the mails in the selected folder
+            # This stores a list of all unique IDs of the mails in the selected folder
+            mail_uids = self.connection.search()[::-1]
 
             for mail_uid in mail_uids:
                 raw_message = self.connection.fetch([mail_uid], ['BODY[]', 'FLAGS'])
@@ -161,9 +163,15 @@ class SimpleMailClient:
         try:
             raw_message = self.connection.fetch([mail_uid], ['BODY[]', 'FLAGS'])
             message = pyzmail.PyzMessage.factory(raw_message[mail_uid][b'BODY[]'])
-            self.message_text_block.set_text(message.text_part.get_payload().decode('UTF-8'))
+            message_text = message.text_part.get_payload().decode('UTF-8')
+
+            width = 100
+            message_with_breaks = '\n'.join(l for line in message_text.splitlines()
+                                            for l in textwrap.wrap(line, width))
+
+            self.message_text_block.set_text(message_with_breaks)
         except Exception as e:
-            self.master.show_error_popup('select_mail', 'An error occured: {}'.format(str(e)))
+            self.master.show_error_popup('select_mail', 'An error occurred: {}'.format(str(e)))
 
 
 if __name__ == '__main__':
