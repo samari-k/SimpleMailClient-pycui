@@ -29,24 +29,23 @@ import py_cui
 import imapclient
 import pyzmail
 import textwrap
+import threading
 
 # TODO:
-#   * integrate subfolders
 #   * put date in subject line
 #   * implement possibility to send/delete/move mails
 #   * expand usability by adding more key commands
 #   * visualize seen/unseen (maybe by colors?)
 #   * use colors
-#   * make error handling more elegant
 #   * handle error-throwing mouseclicks
-#   * show loading-popup while loading messages
-#   * set minimum terminal size for a good look
 
 
 class SimpleMailClient:
     def __init__(self, master):
         """create the cui with all necessary widgets"""
 
+        self.LASTLOGINFILE = 'lastLogin.txt'
+        
         self.master = master
         self.connection = None    # this will be the connection object, once the connection to the server is set up
 
@@ -54,12 +53,12 @@ class SimpleMailClient:
         self.email_text_box = self.master.add_text_box('E-Mail', 6, 0, column_span=2)
         self.password_text_box = self.master.add_text_box('Password', 7, 0, password=True, column_span=2)
 
-        self.connect_button = self.master.add_button('connect', 9, 0, command=self.connect)
+        self.connect_button = self.master.add_button('connect', 9, 0, command=self.show_loading_connect)
         self.disconnect_button = self.master.add_button('disconnect', 9, 1, command=self.disconnect)
 
         self.folder_scroll_menu = self.master.add_scroll_menu('folder', 0, 0, column_span=2, row_span=5)
         self.folder_scroll_menu.set_selectable(False)
-        self.folder_scroll_menu.add_key_command(py_cui.keys.KEY_ENTER, self.select_folder)
+        self.folder_scroll_menu.add_key_command(py_cui.keys.KEY_ENTER, self.show_loading_select_folder)
 
         self.selected_folder_scroll_menu = self.master.add_scroll_menu('selected folder', 0, 2, column_span=10, row_span=5)
         self.selected_folder_scroll_menu.set_selectable(False)
@@ -70,12 +69,28 @@ class SimpleMailClient:
 
         try:
             # read server name and email from last login for faster access
-            last_login_file = open('lastLogin.txt', 'r')
+            last_login_file = open(self.LASTLOGINFILE, 'r')
             self.server_text_box.set_text(last_login_file.readline()[:-1])
             self.email_text_box.set_text(last_login_file.readline())
             last_login_file.close()
-        except:
-            pass
+        except FileNotFoundError:
+            last_login_file = open(self.LASTLOGINFILE, 'w')
+            last_login_file.write('No last login until now.')
+            last_login_file.close()
+
+    def show_loading_connect(self):
+        """show the loading popup while connecting to server"""
+
+        self.master.show_loading_icon_popup('Please Wait', 'Connecting to server')
+        select_folder_thread = threading.Thread(target=self.connect)
+        select_folder_thread.start()
+
+    def show_loading_select_folder(self):
+        """show the loading popup while loading the selected folder"""
+
+        self.master.show_loading_icon_popup('Please Wait', 'Loading selected folder')
+        select_folder_thread = threading.Thread(target=self.select_folder)
+        select_folder_thread.start()
 
     def connect(self):
         """connect to mail-server and present folders"""
@@ -103,11 +118,14 @@ class SimpleMailClient:
             self.password_text_box.set_selectable(False)
 
             # save server name and email for faster future access
-            last_login = open('lastLogin.txt', 'w')
+            last_login = open(self.LASTLOGINFILE, 'w')
             last_login.write('{}\n{}'.format(server, mail))
             last_login.close()
 
+            self.master.stop_loading_popup()
+
         except Exception as e:
+            self.master.stop_loading_popup()
             self.master.show_error_popup('connect', 'An error occured: {}'.format(str(e)))
 
     def disconnect(self):
@@ -152,6 +170,7 @@ class SimpleMailClient:
             self.master.show_error_popup('select_folder', 'An error occured: {}'.format(str(e)))
 
         self.selected_folder_scroll_menu.set_selectable(True)
+        self.master.stop_loading_popup()
 
     def select_mail(self):
         """select mail from selected_folder_scroll_menu and present its plaintext message in message_text_block"""
