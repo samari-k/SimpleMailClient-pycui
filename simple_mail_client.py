@@ -37,7 +37,7 @@ import threading
 #   * expand usability by adding more key commands
 #   * visualize seen/unseen (maybe by colors?)
 #   * use colors
-#   * handle error-throwing mouseclicks
+#   * implement possibility to escape folder-loading
 
 
 class SimpleMailClient:
@@ -50,17 +50,27 @@ class SimpleMailClient:
         self.connection = None    # this will be the connection object, once the connection to the server is set up
 
         self.server_text_box = self.master.add_text_box('IMAP Server', 5, 0, column_span=2)
+        self.server_text_box.set_selected(True)
+
         self.email_text_box = self.master.add_text_box('E-Mail', 6, 0, column_span=2)
+        self.email_text_box.set_selected(True)
+
         self.password_text_box = self.master.add_text_box('Password', 7, 0, password=True, column_span=2)
+        self.password_text_box.set_selected(True)
 
         self.connect_button = self.master.add_button('connect', 9, 0, command=self.show_loading_connect)
         self.disconnect_button = self.master.add_button('disconnect', 9, 1, command=self.disconnect)
+
+        self.server_text_box.add_key_command(py_cui.keys.KEY_ENTER, self.move_focus_to_email)
+        self.email_text_box.add_key_command(py_cui.keys.KEY_ENTER, self.move_focus_to_password)
+        self.password_text_box.add_key_command(py_cui.keys.KEY_ENTER, self.move_focus_to_connect)
 
         self.folder_scroll_menu = self.master.add_scroll_menu('folder', 0, 0, column_span=2, row_span=5)
         self.folder_scroll_menu.set_selectable(False)
         self.folder_scroll_menu.add_key_command(py_cui.keys.KEY_ENTER, self.show_loading_select_folder)
 
-        self.selected_folder_scroll_menu = self.master.add_scroll_menu('selected folder', 0, 2, column_span=10, row_span=5)
+        self.selected_folder_scroll_menu = self.master.add_scroll_menu('selected folder', 0, 2,
+                                                                       column_span=10, row_span=5)
         self.selected_folder_scroll_menu.set_selectable(False)
         self.selected_folder_scroll_menu.add_key_command(py_cui.keys.KEY_ENTER, self.select_mail)
 
@@ -73,10 +83,24 @@ class SimpleMailClient:
             self.server_text_box.set_text(last_login_file.readline()[:-1])
             self.email_text_box.set_text(last_login_file.readline())
             last_login_file.close()
+            self.master.move_focus(self.password_text_box)
         except FileNotFoundError:
             last_login_file = open(self.LASTLOGINFILE, 'w')
             last_login_file.write('No last login until now.')
             last_login_file.close()
+            self.master.move_focus(self.folder_scroll_menu)
+
+    def move_focus_to_email(self):
+        """move focus to email text box"""
+        self.master.move_focus(self.email_text_box)
+
+    def move_focus_to_password(self):
+        """move focus to password text box"""
+        self.master.move_focus(self.password_text_box)
+
+    def move_focus_to_connect(self):
+        """move focus to connectbutton and press it"""
+        self.master.move_focus(self.connect_button, auto_press_buttons=True)
 
     def show_loading_connect(self):
         """show the loading popup while connecting to server"""
@@ -123,6 +147,7 @@ class SimpleMailClient:
             last_login.close()
 
             self.master.stop_loading_popup()
+            self.master.move_focus(self.folder_scroll_menu, auto_press_buttons=True)
 
         except Exception as e:
             self.master.stop_loading_popup()
@@ -145,6 +170,8 @@ class SimpleMailClient:
         self.server_text_box.set_selectable(True)
         self.email_text_box.set_selectable(True)
         self.password_text_box.set_selectable(True)
+        
+        self.master.move_focus(self.server_text_box)
 
     def select_folder(self):
         """select folder from folder_scroll_menu and present all contained mails"""
@@ -166,11 +193,13 @@ class SimpleMailClient:
                 # put all infos together in one line in the selected_folder_scroll_menu
                 self.selected_folder_scroll_menu.add_item('{} - {} - {}'.format(mail_uid, sender, subject))
 
-        except Exception as e:
-            self.master.show_error_popup('select_folder', 'An error occured: {}'.format(str(e)))
+            self.master.stop_loading_popup()
+            self.selected_folder_scroll_menu.set_selectable(True)
+            self.master.move_focus(self.selected_folder_scroll_menu, auto_press_buttons=True)
 
-        self.selected_folder_scroll_menu.set_selectable(True)
-        self.master.stop_loading_popup()
+        except Exception as e:
+            self.master.stop_loading_popup()
+            self.master.show_error_popup('select_folder', 'An error occured: {}'.format(str(e)))
 
     def select_mail(self):
         """select mail from selected_folder_scroll_menu and present its plaintext message in message_text_block"""
