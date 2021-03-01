@@ -1,7 +1,7 @@
 # SimpleMailClient-pycui
 A simple mail client using py_cui, imapclient and pyzmail
 
-![screenshot of the program](simple_mail_client.png)
+![screenshot of the program](screenshot.png)
 
 ## Description:
 
