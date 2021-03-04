@@ -30,6 +30,7 @@ import imapclient
 import pyzmail
 import textwrap
 import threading
+import Xlib.display
 
 # TODO:
 #   * put date in subject line
@@ -222,7 +223,18 @@ class SimpleMailClient:
             self.master.show_error_popup('select_mail', 'An error occurred: {}'.format(str(e)))
 
 
+def setTerminalSize(width, height):
+    WIDTH, HEIGHT = width, height
+    display = Xlib.display.Display()
+    screen_root = display.screen().root
+    windowID = screen_root.get_full_property(display.intern_atom('_NET_ACTIVE_WINDOW'), Xlib.X.AnyPropertyType).value[0]
+    window = display.create_resource_object('window', windowID)
+    window.configure(width=WIDTH, height=HEIGHT)
+    display.sync()
+
+
 if __name__ == '__main__':
+    setTerminalSize(1200,900)
     root = py_cui.PyCUI(12, 12)
     root.toggle_unicode_borders()
     root.set_title('Simple Mail Client')
