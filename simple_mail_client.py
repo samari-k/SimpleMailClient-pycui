@@ -224,6 +224,7 @@ class SimpleMailClient:
 
 
 def setTerminalSize(width, height):
+    """set the terminal to given size, got this from https://unix.stackexchange.com/a/6000"""
     WIDTH, HEIGHT = width, height
     display = Xlib.display.Display()
     screen_root = display.screen().root
